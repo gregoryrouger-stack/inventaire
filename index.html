@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#003e65">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Saisie inv.">
+<title>Saisie inventaire FestiCave</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column, sticky header per screen, big touch targets (≥44px), quantities on the right edge */
+:root{
+  --navy:#003e65; --red:#bd2733;
+  --bg:#eef2f6; --panel:#ffffff; --ink:#0f2233; --muted:#55687a; --line:#d3dce5;
+  --accent:#003e65; --accent-ink:#ffffff; --accent-soft:#e1ebf3; --hot:#bd2733; --hot-soft:#fbe6e8;
+  --input:#fff6d1; --good:#1d6b45; --good-soft:#e2f2e9; --warn:#9a5a00; --warn-soft:#fff0d6;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow","Segoe UI",Roboto,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1824; --panel:#122333; --ink:#e3ebf2; --muted:#93a7b9; --line:#24394d;
+  --accent:#6fb3e3; --accent-ink:#06121c; --accent-soft:#16324a; --hot:#ff7782; --hot-soft:#3a1a20;
+  --input:#3a3416; --good:#6fd39e; --good-soft:#12301f; --warn:#f1b55b; --warn-soft:#3a2b12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1824; --panel:#122333; --ink:#e3ebf2; --muted:#93a7b9; --line:#24394d;
+  --accent:#6fb3e3; --accent-ink:#06121c; --accent-soft:#16324a; --hot:#ff7782; --hot-soft:#3a1a20;
+  --input:#3a3416; --good:#6fd39e; --good-soft:#12301f; --warn:#f1b55b; --warn-soft:#3a2b12; color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.4;padding-bottom:env(safe-area-inset-bottom,0px)}
+.gut{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+.band{background:linear-gradient(160deg,var(--navy) 0 58%,var(--red) 58% 100%);color:#fff;padding-top:env(safe-area-inset-top,0px)}
+.band .in{display:flex;align-items:center;gap:12px;padding-block:12px}
+.band h1{font-family:var(--f-display);font-size:24px;letter-spacing:.03em;text-transform:uppercase;margin:0;line-height:1}
+.band small{display:block;font-family:var(--f-body);font-size:13px;opacity:.9;text-transform:none;letter-spacing:0;margin-top:3px}
+.band .net{margin-left:auto;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;border:1.5px solid #fff;white-space:nowrap}
+.band .net.off{background:#fff;color:var(--red)}
+main{display:flex;flex-direction:column;gap:14px;padding-block:14px 120px}
+h2{font-family:var(--f-display);font-size:20px;text-transform:uppercase;letter-spacing:.03em;margin:0;color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.note{font-size:14px;color:var(--muted)}
+.msg{font-size:14px;padding:10px 12px;border-radius:8px}
+.msg.ok{background:var(--good-soft);color:var(--good)}
+.msg.err{background:var(--hot-soft);color:var(--hot)}
+button{font:inherit;font-weight:700;font-size:16px;border-radius:8px;min-height:46px;padding:10px 16px;cursor:pointer;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent;color:var(--accent)}
+button.hot{background:var(--hot);border-color:var(--hot);color:#fff}
+button:disabled{opacity:.45}
+button:focus-visible,input:focus-visible{outline:3px solid var(--hot);outline-offset:2px}
+label.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+input[type=text],input[type=password],input[type=search]{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 12px;width:100%;min-width:0;text-transform:none;letter-spacing:0;font-weight:400}
+.stores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.store{all:unset;box-sizing:border-box;text-align:center;font-weight:700;padding:12px 6px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer}
+.store[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.store:focus-visible{outline:3px solid var(--hot);outline-offset:2px}
+.sess{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer}
+.sess:focus-visible{outline:3px solid var(--hot);outline-offset:2px}
+.sess .t{font-weight:700;font-size:17px}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--good)}
+.pill{font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);white-space:nowrap}
+.pill.good{background:var(--good-soft);border-color:transparent;color:var(--good)}
+.pill.warn{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* écran de saisie */
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding-block:10px 8px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top.stuck{top:env(safe-area-inset-top,0px)}
+.top .head{display:flex;align-items:center;gap:10px}
+.back{min-height:42px;padding:6px 12px;font-size:15px}
+.top .ttl{font-weight:700;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top .ttl small{display:block;font-weight:500;color:var(--muted);font-size:13px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--accent);border-radius:8px;overflow:hidden}
+.seg button{all:unset;text-align:center;font-weight:700;font-size:14px;padding:9px 4px;color:var(--accent);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.prog{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600}
+.prog .bar{flex:1}
+.bande{font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:15px;color:var(--accent);padding:14px 2px 4px}
+.lines{display:flex;flex-direction:column;gap:8px}
+.line{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center}
+.line.done{border-color:var(--good)}
+.line .lib{font-weight:600;font-size:15px;line-height:1.25;overflow-wrap:anywhere}
+.line .meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.line .meta b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.qbox{grid-row:1 / span 3;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+input.qty{width:92px;height:52px;font-family:var(--f-mono);font-size:22px;text-align:right;padding:6px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--input);color:var(--ink)}
+input.qty:focus{border-color:var(--accent)}
+.st{font-size:12px;font-weight:700;min-height:16px}
+.st.ok{color:var(--good)} .st.wait{color:var(--warn)} .st.err{color:var(--hot)}
+.absent{all:unset;font-size:13px;font-weight:700;color:var(--accent);padding:4px 2px;cursor:pointer}
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);border-top:1px solid var(--line);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px))}
+.foot .in{display:flex;gap:10px;align-items:center}
+.foot button{flex:1}
+.empty{text-align:center;color:var(--muted);padding:24px 8px}
+</style>
+</head>
+<body>
+<div class="band"><div class="in gut">
+  <div><h1>Saisie inventaire</h1><small id="sub">FestiCave · inventaire tournant</small></div>
+  <span class="net" id="net">En ligne</span>
+</div></div>
+
+<!-- configuration -->
+<main class="gut" id="vCfg" hidden>
+  <div class="card">
+    <h2>Connexion</h2>
+    <div class="note">Sur le PC, dans Inventaire tournant › étape 1 › Connexion Supabase, cliquez sur « QR code pour un téléphone » et scannez-le avec l'appareil photo. Ou saisissez les informations ci-dessous.</div>
+    <label class="fld">URL du projet<input type="text" id="cUrl" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off" autocapitalize="off"></label>
+    <label class="fld">Clé publique<input type="password" id="cKey" placeholder="sb_publishable_…" autocomplete="off"></label>
+    <button id="cSave">Se connecter</button>
+    <div id="cMsg"></div>
+  </div>
+</main>
+
+<!-- accueil -->
+<main class="gut" id="vHome" hidden>
+  <div class="stores" id="stores">
+    <button class="store" data-s="CHT">Château-G.</button>
+    <button class="store" data-s="SABLE">Sablé</button>
+    <button class="store" data-s="SEGRE">Segré</button>
+  </div>
+  <div class="row" style="justify-content:space-between"><h2>Inventaires à saisir</h2><button class="ghost" id="hRefresh" style="min-height:40px;padding:6px 12px;font-size:14px">Actualiser</button></div>
+  <div class="lines" id="sessList"></div>
+  <div id="hMsg"></div>
+  <button class="ghost" id="hCfg" style="margin-top:20px">Paramètres de connexion</button>
+</main>
+
+<!-- saisie -->
+<div id="vSess" hidden>
+  <div class="top gut stuck">
+    <div class="head"><button class="ghost back" id="sBack" aria-label="Retour à la liste">‹ Liste</button><div class="ttl" id="sTitle"></div></div>
+    <div class="prog"><div class="bar"><i id="sBar" style="width:0%"></i></div><span id="sCount">0 / 0</span></div>
+    <input type="search" id="sSearch" placeholder="Rechercher un libellé ou un code" autocomplete="off" enterkeyhint="search">
+    <div class="seg" role="group" aria-label="Filtre">
+      <button data-f="all" aria-pressed="true">Tous</button><button data-f="todo" aria-pressed="false">À saisir</button><button data-f="done" aria-pressed="false">Saisis</button>
+    </div>
+  </div>
+  <main class="gut" style="padding-top:4px"><div id="sLines"></div><div id="sMsg"></div></main>
+  <div class="foot"><div class="in gut">
+    <div id="sEndAsk" hidden class="note" style="flex:2"></div>
+    <button class="hot" id="sEnd">Terminer la saisie</button>
+    <button class="ghost" id="sEndNo" hidden>Annuler</button>
+  </div></div>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const STORES={CHT:"Château-Gontier",SABLE:"Sablé",SEGRE:"Segré"};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const fmt=n=>n===null||n===undefined?"":Number(n).toLocaleString("fr-FR",{maximumFractionDigits:2});
+function ls(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function msg(el,t,k){$(el).innerHTML=t?`<div class="msg ${k||"ok"}">${esc(t)}</div>`:""}
+
+/* ---------- connexion ---------- */
+let cfg=ls("saisie-cfg",null);
+(function fromHash(){
+  const m=location.hash.match(/[#&]c=([A-Za-z0-9_-]+)/);
+  if(!m) return;
+  try{const j=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/")))));if(j.u&&j.k){cfg={u:j.u,k:j.k};lsSet("saisie-cfg",cfg)}}catch(e){}
+  history.replaceState(null,"",location.pathname+location.search);
+})();
+async function api(path,opt={}){
+  const key=cfg.k;
+  const res=await fetch(cfg.u.replace(/\/rest\/v1\/?$/,"").replace(/\/+$/,"")+"/rest/v1/"+path,{...opt,headers:{apikey:key,...(key.startsWith("eyJ")?{Authorization:"Bearer "+key}:{}),"Content-Type":"application/json",...(opt.headers||{})}});
+  if(!res.ok){let t="";try{t=(await res.json()).message||""}catch(e){}const err=new Error(`Erreur ${res.status}${t?" : "+t:""}`);err.status=res.status;throw err}
+  return res.status===204?null:res.json().catch(()=>null);
+}
+
+/* ---------- état ---------- */
+let store=ls("saisie-store","SEGRE"), sess=null, lines=[], filter="all", query="";
+let pending=ls("saisie-pending",{});
+const typing={}; // "session|article" -> {s,a,q}
+const pk=(s,a)=>s+"|"+a;
+function show(v){["vCfg","vHome","vSess"].forEach(x=>$(x).hidden=x!==v);window.scrollTo(0,0)}
+function setNet(){const on=navigator.onLine;$("net").textContent=on?(Object.keys(pending).length?`${Object.keys(pending).length} en attente`:"En ligne"):"Hors ligne";$("net").className="net"+(on?"":" off")}
+window.addEventListener("online",()=>{setNet();flush()});window.addEventListener("offline",setNet);
+
+/* ---------- accueil ---------- */
+function renderStores(){document.querySelectorAll(".store").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.s===store)))}
+async function loadHome(){
+  show("vHome");renderStores();$("sub").textContent="FestiCave · "+STORES[store];msg("hMsg","");
+  $("sessList").innerHTML=`<div class="empty">Chargement…</div>`;
+  try{
+    const ss=await api(`inventaire_session?select=*&magasin=eq.${store}&statut=neq.termine&order=cree_le.desc`);
+    if(!ss.length){$("sessList").innerHTML=`<div class="empty">Aucun inventaire à saisir pour ${esc(STORES[store])}.<br>Sur le PC : étape 2 › « Envoyer sur l'appli tél ».</div>`;return}
+    const ll=await api(`inventaire_ligne?select=session_id,qte&session_id=in.(${ss.map(x=>x.id).join(",")})`,{headers:{Range:"0-9999"}});
+    const done={};ll.forEach(l=>{if(l.qte!==null)done[l.session_id]=(done[l.session_id]||0)+1});
+    $("sessList").innerHTML=ss.map(x=>{const d=done[x.id]||0,n=x.nb_articles||0,dt=new Date(x.cree_le);
+      return `<button class="sess" data-id="${x.id}"><span class="t">${esc(x.famille||"Inventaire")}</span><span class="note">${esc(x.selection||"")} · ${dt.toLocaleDateString("fr-FR")} ${dt.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</span>
+      <span class="row"><span class="pill ${x.statut==="saisi"?"good":"warn"}">${x.statut==="saisi"?"Saisie terminée":"À saisir"}</span><span class="pill">${d} / ${n} saisis</span></span>
+      <span class="bar"><i style="width:${n?Math.round(d/n*100):0}%"></i></span></button>`}).join("");
+  }catch(e){$("sessList").innerHTML="";msg("hMsg",(navigator.onLine?"Chargement impossible. ":"Pas de connexion. ")+(e.message||""),"err");if(e.status===401)msg("hMsg","Clé refusée par Supabase : refaites la connexion (Paramètres de connexion).","err")}
+}
+
+/* ---------- saisie ---------- */
+async function openSess(id){
+  show("vSess");$("sLines").innerHTML=`<div class="empty">Chargement…</div>`;filter="all";query="";$("sSearch").value="";segUi();endAsk(false);
+  try{
+    const s=await api(`inventaire_session?select=*&id=eq.${id}`);sess=s[0];
+    lines=await api(`inventaire_ligne?select=*&session_id=eq.${id}&order=ordre`,{headers:{Range:"0-9999"}});
+    lines.forEach(l=>{const p=pending[pk(id,l.article)];if(p)l.qte=p.q;l._st=p?"wait":(l.qte!==null?"ok":"")});
+    lsSet("saisie-last",{sess,lines});
+  }catch(e){
+    const last=ls("saisie-last",null);
+    if(last&&last.sess.id===id){sess=last.sess;lines=last.lines;msg("sMsg","Hors ligne : dernière version enregistrée sur ce téléphone. Les saisies seront envoyées au retour du réseau.","err")}
+    else{$("sLines").innerHTML="";msg("sMsg","Ouverture impossible : "+(e.message||""),"err");return}
+  }
+  $("sTitle").innerHTML=`${esc(sess.famille||"Inventaire")}<small>${esc(STORES[sess.magasin]||sess.magasin)} · ${esc(sess.selection||"")}</small>`;
+  renderLines();
+}
+function progress(){const d=lines.filter(l=>l.qte!==null).length;$("sCount").textContent=`${d} / ${lines.length}`;$("sBar").style.width=(lines.length?Math.round(d/lines.length*100):0)+"%";return d}
+function stTxt(l){return l._st==="ok"?"✓ Enregistré":l._st==="wait"?"En attente…":l._st==="err"?"Non envoyé":""}
+function renderLines(){
+  progress();
+  const q=norm(query).trim();
+  const vis=lines.filter(l=>(filter==="all"||(filter==="todo"&&l.qte===null)||(filter==="done"&&l.qte!==null))&&(!q||norm(l.libelle).includes(q)||String(l.article).includes(q)||String(l.article).replace(/^0+/,"").startsWith(q)));
+  if(!vis.length){$("sLines").innerHTML=`<div class="empty">${q?"Aucun article ne correspond à la recherche.":filter==="todo"?"Tout est saisi.":"Aucun article."}</div>`;return}
+  let prev=null,h="";
+  vis.forEach(l=>{
+    if(l.bande!==prev){if(prev!==null)h+=`</div>`;h+=`<div class="bande">${esc(l.bande||"")}</div><div class="lines">`;prev=l.bande}
+    h+=`<div class="line ${l.qte!==null?"done":""}" id="L${esc(l.article)}">
+      <div class="lib">${esc(l.libelle)}</div>
+      <div class="qbox"><input class="qty" type="text" inputmode="decimal" enterkeyhint="next" data-a="${esc(l.article)}" value="${l.qte===null?"":String(l.qte).replace(".",",")}" aria-label="Quantité comptée en unités, ${esc(l.libelle)}"><span class="st ${l._st||""}" id="S${esc(l.article)}">${stTxt(l)}</span></div>
+      <div class="meta"><b>${esc(l.article)}</b> · Cdt ${fmt(l.cdt)} · Théo <b>${fmt(l.stock_u)}</b> U</div>${l.qte===null?`<div><button class="absent" data-zero="${esc(l.article)}">Absent = 0</button></div>`:""}
+    </div>`;
+  });
+  $("sLines").innerHTML=h+`</div>`;
+}
+const timers={};
+function setQty(article,raw){
+  const l=lines.find(x=>x.article===article);if(!l)return;
+  const s=String(raw).trim().replace(/\s/g,"").replace(",",".");
+  const q=s===""?null:Number(s);
+  if(s!==""&&!isFinite(q)){mark(l,"err","Nombre invalide");return}
+  clearTimeout(typing[article]);
+  if(q===l.qte&&l._st==="ok")return;
+  l.qte=q;l._st="wait";pending[pk(sess.id,article)]={s:sess.id,a:article,q};lsSet("saisie-pending",pending);setNet();
+  const el=$("L"+article);if(el){el.classList.toggle("done",q!==null);const z=el.querySelector("[data-zero]");if(z&&q!==null)z.parentElement.remove()}mark(l,"wait");progress();
+  clearTimeout(timers[article]);timers[article]=setTimeout(flush,400);
+}
+function mark(l,st,t){l._st=st;const e=$("S"+l.article);if(e){e.className="st "+st;e.textContent=t||stTxt(l)}}
+let flushing=false;
+async function flush(){
+  if(!navigator.onLine||!cfg)return;
+  if(flushing){await new Promise(res=>setTimeout(res,300));return flush()}
+  flushing=true;
+  for(const [k,p] of Object.entries(pending)){
+    try{
+      await api(`inventaire_ligne?session_id=eq.${p.s}&article=eq.${encodeURIComponent(p.a)}`,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({qte:p.q,saisi_le:new Date().toISOString()})});
+      if(pending[k]&&pending[k].q===p.q) delete pending[k];
+      const l=sess&&sess.id===p.s?lines.find(x=>x.article===p.a):null;if(l&&!pending[k])mark(l,"ok");
+    }catch(e){const l=sess&&sess.id===p.s?lines.find(x=>x.article===p.a):null;if(l)mark(l,"err");if(!navigator.onLine)break}
+  }
+  lsSet("saisie-pending",pending);setNet();flushing=false;
+}
+setInterval(flush,15000);
+function segUi(){document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.f===filter)))}
+function endAsk(on){
+  const miss=lines.filter(l=>l.qte===null).length;
+  $("sEndAsk").hidden=!on;$("sEndNo").hidden=!on;
+  if(on){$("sEndAsk").textContent=`${miss} article${miss>1?"s":""} non saisi${miss>1?"s":""} : ils seront ignorés. Terminer ?`;$("sEnd").textContent="Oui, terminer"}else $("sEnd").textContent="Terminer la saisie";
+}
+async function endSess(){
+  const miss=lines.filter(l=>l.qte===null).length;
+  if(miss&&$("sEndAsk").hidden){endAsk(true);return}
+  await flush();
+  if(Object.keys(pending).some(k=>k.startsWith(sess.id+"|"))){msg("sMsg","Des saisies ne sont pas encore envoyées. Vérifiez le réseau puis réessayez.","err");endAsk(false);return}
+  try{await api(`inventaire_session?id=eq.${sess.id}`,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({statut:"saisi"})});loadHome();msg("hMsg","Saisie terminée. Le PC peut récupérer les quantités (étape 3).")}
+  catch(e){msg("sMsg","Impossible de terminer : "+(e.message||""),"err")}
+}
+
+/* ---------- événements ---------- */
+$("cSave").addEventListener("click",async()=>{
+  const u=$("cUrl").value.trim(),k=$("cKey").value.replace(/\s+/g,"");
+  if(!/^https:\/\//.test(u)||!k){msg("cMsg","Renseignez l'URL (https://…supabase.co) et la clé publique.","err");return}
+  const old=cfg;cfg={u,k};
+  try{await api("inventaire_session?select=id&limit=1");lsSet("saisie-cfg",cfg);loadHome()}catch(e){cfg=old;msg("cMsg","Connexion refusée : "+(e.message||""),"err")}
+});
+$("stores").addEventListener("click",e=>{const b=e.target.closest(".store");if(!b)return;store=b.dataset.s;lsSet("saisie-store",store);loadHome()});
+$("hRefresh").addEventListener("click",loadHome);
+$("hCfg").addEventListener("click",()=>{show("vCfg");if(cfg){$("cUrl").value=cfg.u;$("cKey").value=cfg.k}});
+$("sessList").addEventListener("click",e=>{const b=e.target.closest(".sess");if(b)openSess(b.dataset.id)});
+$("sBack").addEventListener("click",()=>{flush();loadHome()});
+$("sSearch").addEventListener("input",e=>{query=e.target.value;renderLines()});
+document.querySelector(".seg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;filter=b.dataset.f;segUi();renderLines()});
+$("sLines").addEventListener("change",e=>{if(e.target.classList.contains("qty"))setQty(e.target.dataset.a,e.target.value)});
+$("sLines").addEventListener("input",e=>{if(!e.target.classList.contains("qty"))return;const t=e.target;clearTimeout(typing[t.dataset.a]);typing[t.dataset.a]=setTimeout(()=>setQty(t.dataset.a,t.value),1200)});
+$("sLines").addEventListener("keydown",e=>{if(e.target.classList.contains("qty")&&e.key==="Enter"){e.preventDefault();const all=[...document.querySelectorAll(".qty")],i=all.indexOf(e.target);setQty(e.target.dataset.a,e.target.value);if(all[i+1])all[i+1].focus();else e.target.blur()}});
+$("sLines").addEventListener("click",e=>{const z=e.target.closest("[data-zero]");if(z){const a=z.dataset.zero;const inp=document.querySelector(`.qty[data-a="${CSS.escape(a)}"]`);if(inp)inp.value="0";z.parentElement.remove();setQty(a,"0")}});
+$("sEnd").addEventListener("click",endSess);
+$("sEndNo").addEventListener("click",()=>endAsk(false));
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){flush();if(!$("vHome").hidden)loadHome()}});
+
+setNet();
+if(cfg) loadHome(); else show("vCfg");
+})();
+</script>
+</body>
+</html>
