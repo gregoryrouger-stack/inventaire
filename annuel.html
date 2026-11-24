@@ -269,6 +269,7 @@ tr.pend td{font-style:italic;color:var(--muted)}
         <button class="hot" id="xM3">Exporter le fichier M3</button>
         <button id="xXlsx">Exporter le récapitulatif Excel</button>
         <button class="ghost" id="xClose">Clôturer l'inventaire</button>
+        <button class="ghost" id="xDel" style="margin-left:auto;border-color:var(--hot);color:var(--hot)">Supprimer l'inventaire</button>
       </div>
       <div id="xConfirm"></div>
       <div id="xMsg"></div>
@@ -564,8 +565,22 @@ async function exportXlsx(){
   saveFile(`Inventaire_annuel_${inv.magasin}_${inv.date_inventaire}.xlsx`,new Blob([await wb.xlsx.writeBuffer()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   msg("xMsg","Récapitulatif Excel enregistré : onglets Synthèse (par article) et Comptages (chaque saisie).");
 }
+async function delInv(){
+  if(!$("xConfirm").dataset.del){$("xConfirm").dataset.del="1";
+    $("xConfirm").innerHTML=`<div class="confirm" style="flex-direction:column;align-items:stretch">Supprimer définitivement « ${esc(inv.libelle)} », ses ${artList.length} articles et ses ${allCounts().length} saisies, sur tous les PC ? Cette action est irréversible. Tapez SUPPRIMER pour confirmer.
+      <div class="row"><input type="text" id="xDelTxt" autocomplete="off" style="flex:1 1 160px"><button class="hot small" id="xDelYes">Supprimer définitivement</button><button class="ghost small" id="xDelNo">Annuler</button></div></div>`;$("xDelTxt").focus();return}
+}
+async function delInvGo(){
+  if($("xDelTxt").value.trim().toUpperCase()!=="SUPPRIMER"){$("xDelTxt").focus();return}
+  try{await api(`annuel_inventaire?id=eq.${inv.id}`,{method:"DELETE",headers:{Prefer:"return=minimal"}});
+    pending=pending.filter(p=>p.inventaire_id!==inv.id);lsSet("annuel-pending",pending);setNet();
+    clearInterval(pollT);const name=inv.libelle;inv=null;delete $("xConfirm").dataset.del;$("xConfirm").innerHTML="";
+    await loadHome();msg("hMsg",`« ${name} » a été supprimé.`)}
+  catch(e){msg("xMsg","Suppression impossible : "+e.message,"err")}
+}
 async function toggleClose(){
   const to=inv.statut==="cloture"?"ouvert":"cloture";
+  if($("xConfirm").dataset.del){delete $("xConfirm").dataset.del;$("xConfirm").innerHTML=""}
   if(to==="cloture"&&!$("xConfirm").innerHTML){$("xConfirm").innerHTML=`<div class="confirm">Clôturer ferme la saisie sur tous les PC. Faites-le après l'export M3. <button class="hot small" id="xYes">Oui, clôturer</button><button class="ghost small" id="xNo">Annuler</button></div>`;return}
   $("xConfirm").innerHTML="";
   try{await api(`annuel_inventaire?id=eq.${inv.id}`,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({statut:to})});inv.statut=to;$("iClosed").hidden=to!=="cloture";renderRecap();msg("xMsg",to==="cloture"?"Inventaire clôturé.":"Saisie rouverte.")}
@@ -603,7 +618,10 @@ $("qSave").addEventListener("click",saveCount);$("qCancel").addEventListener("cl
 $("mine").addEventListener("click",e=>{const b=e.target.closest("[data-del]");if(b)delCount(b.dataset.del)});
 ["rShow","rFam"].forEach(id=>$(id).addEventListener("input",renderRecap));
 $("xM3").addEventListener("click",exportM3);$("xXlsx").addEventListener("click",exportXlsx);$("xClose").addEventListener("click",toggleClose);
-$("xConfirm").addEventListener("click",e=>{if(e.target.id==="xYes")toggleClose();if(e.target.id==="xNo")$("xConfirm").innerHTML=""});
+$("xConfirm").addEventListener("click",e=>{if(e.target.id==="xYes")toggleClose();if(e.target.id==="xNo")$("xConfirm").innerHTML="";
+  if(e.target.id==="xDelYes")delInvGo();if(e.target.id==="xDelNo"){delete $("xConfirm").dataset.del;$("xConfirm").innerHTML=""}});
+$("xConfirm").addEventListener("keydown",e=>{if(e.target.id==="xDelTxt"&&e.key==="Enter")delInvGo()});
+$("xDel").addEventListener("click",delInv);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){flush();poll()}});
 
 setNet();
