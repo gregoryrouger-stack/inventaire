@@ -79,9 +79,9 @@ button:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
 .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--good)}
 /* saisie */
-.grid{display:grid;grid-template-columns:minmax(0,760px);justify-content:center;gap:16px;align-items:start}
+.grid{display:block;width:100%;max-width:760px;margin:0 auto}
 @media (max-width:980px){.grid{grid-template-columns:1fr}}
-.left{display:flex;flex-direction:column;gap:16px}
+.left{display:flex;flex-direction:column;gap:16px;min-width:0}
 @media (max-width:980px){.left{position:static}}
 .searchwrap{position:relative}
 #q{width:100%;font-size:18px;padding:11px 12px}
@@ -125,6 +125,18 @@ tr.pend td{font-style:italic;color:var(--muted)}
 .tab:focus-visible{outline:2px solid var(--hot)}
 .confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--hot-soft);color:var(--hot);border-radius:6px;padding:10px 12px;font-size:14px}
 .empty{color:var(--muted);padding:14px 4px}
+@media (max-width:600px){
+  .band .gut{padding-block:10px;gap:8px 12px}
+  .logo{padding:4px 12px}.logo img{height:28px}
+  .band h1{font-size:22px}.band h1 small{font-size:12.5px}
+  .band .right{margin-left:0}
+  .tab{font-size:15px;padding:8px 10px}
+  main{padding-block:12px 40px;gap:12px}
+  .card{padding:12px}
+  .qtyrow input{font-size:20px}
+  .total b{font-size:26px}
+  #mineT tr>:nth-child(2),#mineT tr>:nth-child(4),#mineT tr>:nth-child(5){display:none}
+}
 </style>
 </head>
 <body>
@@ -203,14 +215,14 @@ tr.pend td{font-style:italic;color:var(--muted)}
       <section class="card top">
         <h3>Saisie</h3>
         <div class="searchwrap">
-          <input type="text" id="q" placeholder="Code, libellé ou adresse de l'article" autocomplete="off" aria-label="Rechercher un article">
+          <input type="text" id="q" enterkeyhint="search" placeholder="Code, libellé ou adresse de l'article" autocomplete="off" aria-label="Rechercher un article">
           <div class="results" id="results" hidden></div>
         </div>
         <div class="sel" id="sel" hidden></div>
         <div class="qtyrow" id="qtyRow" hidden>
-          <label class="fld"><span id="lC">Colis</span><input type="text" id="qC" inputmode="decimal" autocomplete="off"></label>
+          <label class="fld"><span id="lC">Colis</span><input type="text" id="qC" inputmode="decimal" enterkeyhint="next" autocomplete="off"></label>
           <span class="op" id="opCdt">× 6 +</span>
-          <label class="fld"><span id="lU">Unités</span><input type="text" id="qU" inputmode="decimal" autocomplete="off"></label>
+          <label class="fld"><span id="lU">Unités</span><input type="text" id="qU" inputmode="decimal" enterkeyhint="done" autocomplete="off"></label>
           <span class="op">=</span>
           <div class="total"><span>Total (U)</span><b id="qT">0</b></div>
         </div>
@@ -220,7 +232,7 @@ tr.pend td{font-style:italic;color:var(--muted)}
       </section>
       <section class="card">
         <div class="row between"><h3>Mes dernières saisies</h3><span class="note" id="myCount"></span></div>
-        <div class="tbox" style="max-height:50vh"><table>
+        <div class="tbox" style="max-height:50vh"><table id="mineT">
           <thead><tr><th>Heure</th><th>Article</th><th>Libellé</th><th class="num">Colis</th><th class="num">Unités</th><th class="num">Total U</th><th></th></tr></thead>
           <tbody id="mine"></tbody>
         </table></div>
