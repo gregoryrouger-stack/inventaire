@@ -79,9 +79,9 @@ button:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
 .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--good)}
 /* saisie */
-.grid{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:16px;align-items:start}
+.grid{display:grid;grid-template-columns:minmax(0,760px);justify-content:center;gap:16px;align-items:start}
 @media (max-width:980px){.grid{grid-template-columns:1fr}}
-.left{display:flex;flex-direction:column;gap:16px;position:sticky;top:12px}
+.left{display:flex;flex-direction:column;gap:16px}
 @media (max-width:980px){.left{position:static}}
 .searchwrap{position:relative}
 #q{width:100%;font-size:18px;padding:11px 12px}
@@ -220,26 +220,12 @@ tr.pend td{font-style:italic;color:var(--muted)}
       </section>
       <section class="card">
         <div class="row between"><h3>Mes dernières saisies</h3><span class="note" id="myCount"></span></div>
-        <div class="tbox" style="max-height:38vh"><table>
-          <thead><tr><th>Heure</th><th>Article</th><th class="num">Colis</th><th class="num">Unités</th><th class="num">Total U</th><th></th></tr></thead>
+        <div class="tbox" style="max-height:50vh"><table>
+          <thead><tr><th>Heure</th><th>Article</th><th>Libellé</th><th class="num">Colis</th><th class="num">Unités</th><th class="num">Total U</th><th></th></tr></thead>
           <tbody id="mine"></tbody>
         </table></div>
       </section>
     </div>
-    <section class="card">
-      <div class="row between"><h3>Articles du magasin</h3><span class="note" id="catInfo"></span></div>
-      <div class="row">
-        <label class="fld" style="flex:1 1 220px">Filtrer<input type="search" id="cQ" placeholder="Code ou libellé"></label>
-        <label class="fld">Famille<select id="cFam"><option value="">Toutes</option></select></label>
-        <label class="fld">Afficher<select id="cShow"><option value="all">Tous</option><option value="todo">Non comptés</option><option value="done">Comptés</option></select></label>
-        <label class="fld">Trier par<select id="cSort"><option value="adr">Adresse picking</option><option value="code">Code article</option><option value="lib">Libellé</option></select></label>
-      </div>
-      <div class="tbox"><table>
-        <thead><tr><th>Article</th><th>Libellé</th><th>Adresse</th><th class="num">Cdt</th><th class="num">Compté U</th><th>Compté par</th></tr></thead>
-        <tbody id="cat"></tbody>
-      </table></div>
-      <div class="note">Cliquez sur une ligne pour saisir cet article.</div>
-    </section>
   </div>
 
   <!-- synthèse -->
@@ -395,7 +381,7 @@ async function openInv(id){
   }catch(e){$("iStats").innerHTML="";msg("hMsg","Ouverture impossible : "+e.message,"err");loadHome();return}
   $("hdrSub").textContent=`${inv.libelle} · ${frDate(inv.date_inventaire)}`;
   const fams=[...new Set(artList.map(a=>a.famille||"").filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
-  ["cFam","rFam"].forEach(s=>$(s).innerHTML=`<option value="">Toutes</option>`+fams.map(f=>`<option>${esc(f)}</option>`).join(""));
+  ["rFam"].forEach(s=>$(s).innerHTML=`<option value="">Toutes</option>`+fams.map(f=>`<option>${esc(f)}</option>`).join(""));
   $("iClosed").hidden=inv.statut!=="cloture";
   tab(inv.statut==="cloture"?"R":"S");
   clearInterval(pollT);pollT=setInterval(poll,8000);
@@ -496,7 +482,7 @@ function renderMine(){
   const rows=allCounts().filter(c=>c.tmp||(mine.has(c.id)&&c.inventaire_id===inv.id)).sort((a,b)=>(b.cree_le||"").localeCompare(a.cree_le||"")).slice(0,200);
   $("myCount").textContent=rows.length?`${rows.length} saisie${rows.length>1?"s":""}`:"";
   $("mine").innerHTML=rows.length?rows.map(c=>{const a=arts.get(c.article)||{libelle:""};const key=c.tmp||c.id;
-    return `<tr class="${c.tmp?"pend":""}" title="${esc(a.libelle)}"><td class="muted">${new Date(c.cree_le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</td><td class="code">${esc(c.article)}</td><td class="num">${fmt(c.colis)}</td><td class="num">${fmt(c.unites)}</td><td class="num"><b>${fmt(c.total_u)}</b></td><td>${inv.statut==="cloture"?"":`<button class="ghost small" data-del="${esc(key)}">${delAsk===String(key)?"Confirmer":"Supprimer"}</button>`}</td></tr>`}).join("")
+    return `<tr class="${c.tmp?"pend":""}" title="${esc(a.libelle)}"><td class="muted">${new Date(c.cree_le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</td><td class="code">${esc(c.article)}</td><td>${esc(a.libelle)}</td><td class="num">${fmt(c.colis)}</td><td class="num">${fmt(c.unites)}</td><td class="num"><b>${fmt(c.total_u)}</b></td><td>${inv.statut==="cloture"?"":`<button class="ghost small" data-del="${esc(key)}">${delAsk===String(key)?"Confirmer":"Supprimer"}</button>`}</td></tr>`}).join("")
     :`<tr><td colspan="7" class="empty">Vos saisies apparaîtront ici. Pour corriger : supprimer la ligne puis ressaisir.</td></tr>`;
 }
 async function delCount(key){
@@ -515,6 +501,7 @@ function catFilter(list,qv,fam,show,t){
   return list.filter(a=>(!fam||a.famille===fam)&&(!q.length||q.every(w=>a.key.includes(w)))&&(show==="all"||(show==="todo"&&!t.has(a.article))||(show==="done"&&t.has(a.article))||(show==="todostock"&&!t.has(a.article)&&a.stock_u!==0)||(show==="ecart"&&r2((t.get(a.article)||0)-a.stock_u)!==0)));
 }
 function renderCat(){
+  if(!$("cat"))return;
   const {t,z}=totals(),list=sortArts(catFilter(artList,$("cQ").value,$("cFam").value,$("cShow").value,t),$("cSort").value);
   const vis=list.slice(0,400);
   $("catInfo").textContent=`${list.length} article${list.length>1?"s":""}${list.length>400?" · 400 premiers affichés, affinez le filtre":""}`;
@@ -602,8 +589,6 @@ $("results").addEventListener("click",e=>{const r=e.target.closest(".res");if(!r
 ["qC","qU"].forEach(id=>{$(id).addEventListener("input",calc);$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(id==="qC")$("qU").focus();else saveCount()}else if(e.key==="Escape")resetSaisie()})});
 $("qSave").addEventListener("click",saveCount);$("qCancel").addEventListener("click",resetSaisie);
 $("mine").addEventListener("click",e=>{const b=e.target.closest("[data-del]");if(b)delCount(b.dataset.del)});
-["cQ","cFam","cShow","cSort"].forEach(id=>$(id).addEventListener("input",renderCat));
-$("cat").addEventListener("click",e=>{const r=e.target.closest("tr[data-a]");if(r){pick(arts.get(r.dataset.a));window.scrollTo({top:0,behavior:"smooth"})}});
 ["rShow","rFam"].forEach(id=>$(id).addEventListener("input",renderRecap));
 $("xM3").addEventListener("click",exportM3);$("xXlsx").addEventListener("click",exportXlsx);$("xClose").addEventListener("click",toggleClose);
 $("xConfirm").addEventListener("click",e=>{if(e.target.id==="xYes")toggleClose();if(e.target.id==="xNo")$("xConfirm").innerHTML=""});
