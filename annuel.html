@@ -190,11 +190,9 @@ tr.pend td{font-style:italic;color:var(--muted)}
   <!-- poste -->
   <section class="card top" id="poste" hidden>
     <h2>Votre poste</h2>
-    <div class="note">Indiquez votre nom et la zone que vous comptez. Vous pourrez changer de zone à tout moment.</div>
+    <div class="note">Indiquez votre nom : il apparaît sur chacune de vos saisies.</div>
     <div class="row">
       <label class="fld">Votre nom<input type="text" id="pName" placeholder="ex. Julie" autocomplete="off"></label>
-      <label class="fld">Zone<input type="text" id="pZone" list="zoneList" placeholder="ex. Réserve" autocomplete="off"></label>
-      <datalist id="zoneList"></datalist>
       <button id="pOk">Commencer la saisie</button>
     </div>
   </section>
@@ -203,8 +201,7 @@ tr.pend td{font-style:italic;color:var(--muted)}
   <div id="vSaisie" class="grid" hidden>
     <div class="left">
       <section class="card top">
-        <div class="row between"><h3>Zone en cours</h3><button class="ghost small" id="zAdd">+ Autre zone</button></div>
-        <div class="zones" id="zones"></div>
+        <h3>Saisie</h3>
         <div class="searchwrap">
           <input type="text" id="q" placeholder="Code, libellé ou adresse de l'article" autocomplete="off" aria-label="Rechercher un article">
           <div class="results" id="results" hidden></div>
@@ -219,12 +216,12 @@ tr.pend td{font-style:italic;color:var(--muted)}
         </div>
         <div class="row" id="saveRow" hidden><button class="hot" id="qSave">Enregistrer · Entrée</button><button class="ghost" id="qCancel">Annuler · Échap</button></div>
         <div id="sMsg"></div>
-        <div class="note">Rechercher, Entrée, saisir colis puis unités, Entrée : le comptage est enregistré et l'article suivant peut être saisi. Un même article compté dans plusieurs zones s'additionne.</div>
+        <div class="note">Rechercher, Entrée, saisir colis puis unités, Entrée : le comptage est enregistré et l'article suivant peut être saisi. Un même article compté plusieurs fois, par vous ou par un autre poste, s'additionne.</div>
       </section>
       <section class="card">
         <div class="row between"><h3>Mes dernières saisies</h3><span class="note" id="myCount"></span></div>
         <div class="tbox" style="max-height:38vh"><table>
-          <thead><tr><th>Heure</th><th>Article</th><th>Zone</th><th class="num">Colis</th><th class="num">Unités</th><th class="num">Total U</th><th></th></tr></thead>
+          <thead><tr><th>Heure</th><th>Article</th><th class="num">Colis</th><th class="num">Unités</th><th class="num">Total U</th><th></th></tr></thead>
           <tbody id="mine"></tbody>
         </table></div>
       </section>
@@ -238,7 +235,7 @@ tr.pend td{font-style:italic;color:var(--muted)}
         <label class="fld">Trier par<select id="cSort"><option value="adr">Adresse picking</option><option value="code">Code article</option><option value="lib">Libellé</option></select></label>
       </div>
       <div class="tbox"><table>
-        <thead><tr><th>Article</th><th>Libellé</th><th>Adresse</th><th class="num">Cdt</th><th class="num">Compté U</th><th>Zones</th></tr></thead>
+        <thead><tr><th>Article</th><th>Libellé</th><th>Adresse</th><th class="num">Cdt</th><th class="num">Compté U</th><th>Compté par</th></tr></thead>
         <tbody id="cat"></tbody>
       </table></div>
       <div class="note">Cliquez sur une ligne pour saisir cet article.</div>
@@ -263,13 +260,13 @@ tr.pend td{font-style:italic;color:var(--muted)}
         </div>
       </div>
       <div class="tbox"><table>
-        <thead><tr><th>Article</th><th>Libellé</th><th>Adresse</th><th class="num">Compté U</th><th>Détail (zone, quantité, compteur)</th></tr></thead>
+        <thead><tr><th>Article</th><th>Libellé</th><th>Adresse</th><th class="num">Compté U</th><th>Détail (quantité, compteur)</th></tr></thead>
         <tbody id="recap"></tbody>
       </table></div>
     </section>
     <section class="card">
       <h3>Exports</h3>
-      <div class="note">Fichier M3 : tous les articles du fichier articles, avec la quantité comptée (toutes zones additionnées), ou 0 si personne ne l'a compté. Format : MAGASIN;article;libellé;quantité;U.</div>
+      <div class="note">Fichier M3 : tous les articles du fichier articles, avec la quantité comptée (tous les comptages additionnés), ou 0 si personne ne l'a compté. Format : MAGASIN;article;libellé;quantité;U.</div>
       <div class="row">
         <button class="hot" id="xM3">Exporter le fichier M3</button>
         <button id="xXlsx">Exporter le récapitulatif Excel</button>
@@ -285,7 +282,6 @@ tr.pend td{font-style:italic;color:var(--muted)}
 (function(){
 const $=id=>document.getElementById(id);
 const STORES={CHT:"Château-Gontier",SABLE:"Sablé",SEGRE:"Segré"};
-const ZONES_DEF=["Magasin","Réserve","Cave","Chambre froide","Quai"];
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
 const nc=c=>String(c??"").trim().replace(/^0+(?=\d)/,"");
@@ -313,7 +309,7 @@ async function api(path,opt={}){
 async function getAll(path){const out=[];for(let a=0;;a+=1000){const rows=await api(path,{headers:{Range:`${a}-${a+999}`}});out.push(...rows);if(rows.length<1000)break}return out}
 
 /* ---------- état ---------- */
-let store=ls("annuel-store","SEGRE"), inv=null, arts=new Map(), artList=[], counts=[], lastId=0, poste=ls("annuel-poste",{name:"",zone:""}), zones=ls("annuel-zones",ZONES_DEF.slice());
+let store=ls("annuel-store","SEGRE"), inv=null, arts=new Map(), artList=[], counts=[], lastId=0, poste=ls("annuel-poste",{name:""});
 let pending=ls("annuel-pending",[]); // comptages pas encore envoyés
 let selArt=null, resIdx=0, resList=[], delAsk=null, pollT=null;
 function show(v){["vCfg","vHome","vInv"].forEach(x=>$(x).hidden=x!==v);window.scrollTo(0,0)}
@@ -406,23 +402,22 @@ async function openInv(id){
 }
 const fixC=c=>{c.colis=Number(c.colis)||0;c.unites=Number(c.unites)||0;c.total_u=Number(c.total_u)||0};
 function allCounts(){return counts.concat(pending.filter(p=>p.inventaire_id===inv.id))}
-function totals(){const t=new Map(),z=new Map();allCounts().forEach(c=>{t.set(c.article,r2((t.get(c.article)||0)+c.total_u));const s=z.get(c.article)||new Set();if(c.zone)s.add(c.zone);z.set(c.article,s)});return {t,z}}
+function totals(){const t=new Map(),z=new Map();allCounts().forEach(c=>{t.set(c.article,r2((t.get(c.article)||0)+c.total_u));const s=z.get(c.article)||new Set();if(c.compteur)s.add(c.compteur);z.set(c.article,s)});return {t,z}}
 function tab(w){
   $("tabS").setAttribute("aria-selected",String(w==="S"));$("tabR").setAttribute("aria-selected",String(w==="R"));
-  if(w==="S"){$("vRecap").hidden=true;if(inv.statut==="cloture"){$("vSaisie").hidden=true;$("poste").hidden=true}else if(!poste.name||!poste.zone){askPoste()}else{$("poste").hidden=true;$("vSaisie").hidden=false;renderSaisie();$("q").focus()}}
+  if(w==="S"){$("vRecap").hidden=true;if(inv.statut==="cloture"){$("vSaisie").hidden=true;$("poste").hidden=true}else if(!poste.name){askPoste()}else{$("poste").hidden=true;$("vSaisie").hidden=false;renderSaisie();$("q").focus()}}
   else{$("vSaisie").hidden=true;$("poste").hidden=true;$("vRecap").hidden=false;renderRecap()}
   renderStats();
 }
-function askPoste(){$("poste").hidden=false;$("vSaisie").hidden=true;$("pName").value=poste.name||"";$("pZone").value=poste.zone||"";$("zoneList").innerHTML=zones.map(z=>`<option value="${esc(z)}">`).join("");(poste.name?$("pZone"):$("pName")).focus()}
+function askPoste(){$("poste").hidden=false;$("vSaisie").hidden=true;$("pName").value=poste.name||"";$("pName").focus()}
 function renderStats(){
   const {t}=totals(),n=artList.length,d=artList.filter(a=>t.has(a.article)).length;
   $("iStats").innerHTML=`<span class="pill good"><b>${d}</b> / ${n} articles comptés</span><span class="pill warn"><b>${n-d}</b> non comptés</span><span class="pill"><b>${allCounts().length}</b> saisies</span>`;
-  $("who").hidden=!poste.name;$("who").textContent=poste.name?`${poste.name} · ${poste.zone}`:"";
+  $("who").hidden=!poste.name;$("who").textContent=poste.name||"";
 }
 
 /* ---------- saisie ---------- */
-function renderZones(){if(!zones.includes(poste.zone))zones.push(poste.zone);$("zones").innerHTML=zones.map(z=>`<button class="zone" data-z="${esc(z)}" aria-pressed="${z===poste.zone}">${esc(z)}</button>`).join("")}
-function renderSaisie(){renderZones();renderMine();renderCat();renderStats()}
+function renderSaisie(){renderMine();renderCat();renderStats()}
 function search(q){
   q=norm(q).trim();if(!q)return [];
   const words=q.split(/\s+/),exact=[],starts=[],other=[];
@@ -461,10 +456,10 @@ function calc(){const c=num($("qC").value),u=num($("qU").value);const ok=!Number
 function resetSaisie(){selArt=null;$("q").value="";$("sel").hidden=true;$("qtyRow").hidden=true;$("saveRow").hidden=true;$("results").hidden=true;$("q").focus()}
 async function saveCount(){
   if(!selArt||inv.statut==="cloture")return;
-  const v=calc();if(!v){msg("sMsg","Saisissez un nombre de colis et/ou d'unités (0 si l'article est absent de la zone).","err");return}
-  const row={tmp:"t"+Date.now()+Math.random().toString(36).slice(2,6),inventaire_id:inv.id,article:selArt.article,zone:poste.zone,colis:v.c,unites:v.u,total_u:v.t,compteur:poste.name,cree_le:new Date().toISOString()};
+  const v=calc();if(!v){msg("sMsg","Saisissez un nombre de colis et/ou d'unités (0 si l'article est absent).","err");return}
+  const row={tmp:"t"+Date.now()+Math.random().toString(36).slice(2,6),inventaire_id:inv.id,article:selArt.article,zone:null,colis:v.c,unites:v.u,total_u:v.t,compteur:poste.name,cree_le:new Date().toISOString()};
   pending.push(row);lsSet("annuel-pending",pending);setNet();
-  msg("sMsg",`${selArt.article} · ${fmt(v.t)} U enregistré (${poste.zone}).`);
+  msg("sMsg",`${selArt.article} · ${fmt(v.t)} U enregistré.`);
   resetSaisie();renderMine();renderCat();renderStats();flush();
 }
 let flushing=false;
@@ -501,7 +496,7 @@ function renderMine(){
   const rows=allCounts().filter(c=>c.tmp||(mine.has(c.id)&&c.inventaire_id===inv.id)).sort((a,b)=>(b.cree_le||"").localeCompare(a.cree_le||"")).slice(0,200);
   $("myCount").textContent=rows.length?`${rows.length} saisie${rows.length>1?"s":""}`:"";
   $("mine").innerHTML=rows.length?rows.map(c=>{const a=arts.get(c.article)||{libelle:""};const key=c.tmp||c.id;
-    return `<tr class="${c.tmp?"pend":""}" title="${esc(a.libelle)}"><td class="muted">${new Date(c.cree_le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</td><td class="code">${esc(c.article)}</td><td class="muted">${esc(c.zone||"")}</td><td class="num">${fmt(c.colis)}</td><td class="num">${fmt(c.unites)}</td><td class="num"><b>${fmt(c.total_u)}</b></td><td>${inv.statut==="cloture"?"":`<button class="ghost small" data-del="${esc(key)}">${delAsk===String(key)?"Confirmer":"Supprimer"}</button>`}</td></tr>`}).join("")
+    return `<tr class="${c.tmp?"pend":""}" title="${esc(a.libelle)}"><td class="muted">${new Date(c.cree_le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</td><td class="code">${esc(c.article)}</td><td class="num">${fmt(c.colis)}</td><td class="num">${fmt(c.unites)}</td><td class="num"><b>${fmt(c.total_u)}</b></td><td>${inv.statut==="cloture"?"":`<button class="ghost small" data-del="${esc(key)}">${delAsk===String(key)?"Confirmer":"Supprimer"}</button>`}</td></tr>`}).join("")
     :`<tr><td colspan="7" class="empty">Vos saisies apparaîtront ici. Pour corriger : supprimer la ligne puis ressaisir.</td></tr>`;
 }
 async function delCount(key){
@@ -536,7 +531,7 @@ function renderRecap(){
   const det=new Map();allCounts().forEach(c=>{const l=det.get(c.article)||[];l.push(c);det.set(c.article,l)});
   const list=sortArts(catFilter(artList,"",$("rFam").value,$("rShow").value,t),"adr");
   $("recap").innerHTML=list.slice(0,800).map(a=>{const c=t.has(a.article)?t.get(a.article):null;
-    return `<tr><td class="code">${esc(a.article)}</td><td>${esc(a.libelle)}</td><td class="code muted">${esc(a.adresse||"")}</td><td class="num">${c===null?"—":`<b>${fmt(c)}</b>`}</td><td class="muted">${esc((det.get(a.article)||[]).map(x=>`${x.zone||"?"} ${fmt(x.total_u)} (${x.compteur||"?"})`).join(" · "))}</td></tr>`}).join("")||`<tr><td colspan="5" class="empty">Aucun article dans ce filtre.</td></tr>`;
+    return `<tr><td class="code">${esc(a.article)}</td><td>${esc(a.libelle)}</td><td class="code muted">${esc(a.adresse||"")}</td><td class="num">${c===null?"—":`<b>${fmt(c)}</b>`}</td><td class="muted">${esc((det.get(a.article)||[]).map(x=>`${fmt(x.total_u)} (${x.compteur||"?"})`).join(" · "))}</td></tr>`}).join("")||`<tr><td colspan="5" class="empty">Aucun article dans ce filtre.</td></tr>`;
   $("xClose").textContent=inv.statut==="cloture"?"Rouvrir la saisie":"Clôturer l'inventaire";
 }
 async function refreshAll(){
@@ -560,13 +555,13 @@ async function exportXlsx(){
   const {t,z}=totals(),wb=new ExcelJS.Workbook(),font={name:"Arial",size:10},bold={...font,bold:true},thin={style:"thin",color:{argb:"FFC9D3DD"}},border={top:thin,bottom:thin,left:thin,right:thin};
   const head=(ws,cols)=>{const h=ws.addRow(cols);h.eachCell(c=>{c.font={...bold,color:{argb:"FFFFFFFF"}};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF003E65"}};c.border=border});ws.views=[{state:"frozen",ySplit:1}]};
   const ws=wb.addWorksheet("Synthèse");ws.columns=[{width:11},{width:56},{width:26},{width:14},{width:8},{width:6},{width:12},{width:30}];
-  head(ws,["Article","Libellé","Famille","Adresse","Colis","Cdt","Compté U","Zones"]);
+  head(ws,["Article","Libellé","Famille","Adresse","Colis","Cdt","Compté U","Compté par"]);
   sortArts(artList,"code").forEach(a=>{const row=ws.addRow([a.article,a.libelle,a.famille,a.adresse||"",a.unite||"",a.cdt,Math.round(t.get(a.article)||0),[...(z.get(a.article)||[])].join(", ")]);row.eachCell({includeEmpty:true},c=>{c.font=font;c.border=border});row.getCell(1).numFmt="@";if(!t.has(a.article))row.getCell(7).font={...font,color:{argb:"FFBD2733"}}});
   ws.autoFilter={from:"A1",to:`H${artList.length+1}`};
-  const wd=wb.addWorksheet("Comptages");wd.columns=[{width:18},{width:11},{width:50},{width:18},{width:9},{width:9},{width:10},{width:16}];
-  head(wd,["Date et heure","Article","Libellé","Zone","Colis","Unités","Total U","Compteur"]);
-  allCounts().forEach(c=>{const dl=new Date(c.cree_le),row=wd.addRow([new Date(dl.getTime()-dl.getTimezoneOffset()*60000),c.article,(arts.get(c.article)||{}).libelle||"",c.zone||"",c.colis,c.unites,c.total_u,c.compteur||""]);row.eachCell({includeEmpty:true},x=>{x.font=font;x.border=border});row.getCell(1).numFmt="dd/mm/yyyy hh:mm";row.getCell(2).numFmt="@"});
-  wd.autoFilter={from:"A1",to:`H${allCounts().length+1}`};
+  const wd=wb.addWorksheet("Comptages");wd.columns=[{width:18},{width:11},{width:50},{width:9},{width:9},{width:10},{width:16}];
+  head(wd,["Date et heure","Article","Libellé","Colis","Unités","Total U","Compteur"]);
+  allCounts().forEach(c=>{const dl=new Date(c.cree_le),row=wd.addRow([new Date(dl.getTime()-dl.getTimezoneOffset()*60000),c.article,(arts.get(c.article)||{}).libelle||"",c.colis,c.unites,c.total_u,c.compteur||""]);row.eachCell({includeEmpty:true},x=>{x.font=font;x.border=border});row.getCell(1).numFmt="dd/mm/yyyy hh:mm";row.getCell(2).numFmt="@"});
+  wd.autoFilter={from:"A1",to:`G${allCounts().length+1}`};
   saveFile(`Inventaire_annuel_${inv.magasin}_${inv.date_inventaire}.xlsx`,new Blob([await wb.xlsx.writeBuffer()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   msg("xMsg","Récapitulatif Excel enregistré : onglets Synthèse (par article) et Comptages (chaque saisie).");
 }
@@ -592,11 +587,10 @@ $("nFile").addEventListener("change",async()=>{const f=$("nFile").files[0];if(!f
     else msg("nMsg",`${f.name} n'est pas un fichier ARTICLE.CSV de M3 : il sera lu comme un fichier stock.`,"err")}catch(e){msg("nMsg","Lecture impossible : "+e.message,"err")}});
 $("iBack").addEventListener("click",()=>{clearInterval(pollT);inv=null;loadHome()});
 $("tabS").addEventListener("click",()=>tab("S"));$("tabR").addEventListener("click",()=>tab("R"));
-$("pOk").addEventListener("click",()=>{const n=$("pName").value.trim(),z=$("pZone").value.trim();if(!n||!z){$("pOk").textContent="Nom et zone obligatoires";return}poste={name:n,zone:z};lsSet("annuel-poste",poste);if(!zones.includes(z)){zones.push(z);lsSet("annuel-zones",zones)}tab("S")});
-$("pZone").addEventListener("keydown",e=>{if(e.key==="Enter")$("pOk").click()});
+$("pOk").addEventListener("click",()=>{const n=$("pName").value.trim();if(!n){$("pOk").textContent="Nom obligatoire";return}poste={name:n};lsSet("annuel-poste",poste);tab("S")});
+$("pName").addEventListener("keydown",e=>{if(e.key==="Enter")$("pOk").click()});
 $("who").addEventListener("click",askPoste);
-$("zones").addEventListener("click",e=>{const b=e.target.closest(".zone");if(!b)return;poste.zone=b.dataset.z;lsSet("annuel-poste",poste);renderZones();renderStats();$("q").focus()});
-$("zAdd").addEventListener("click",askPoste);
+
 $("q").addEventListener("input",()=>{if(selArt){selArt=null;$("sel").hidden=true;$("qtyRow").hidden=true;$("saveRow").hidden=true}renderResults()});
 $("q").addEventListener("keydown",e=>{
   if(e.key==="ArrowDown"){e.preventDefault();moveRes(1)}else if(e.key==="ArrowUp"){e.preventDefault();moveRes(-1)}
